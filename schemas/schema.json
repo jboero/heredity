@@ -1,0 +1,288 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Person",
+    "type": "object",
+    "properties": {
+        "$schema": {
+            "type": "string",
+            "description": "Which schema version is being used? Defaults to latest in main branch. Useful for IDE autocompletion.",
+            "default": "https://raw.githubusercontent.com/jboero/heredity/main/schemas/config.json",
+            "required": false
+        },
+        "source": {
+            "type": "object",
+            "description": "Optional source to sync changes.",
+            "properties": {
+                "synctype": {
+                    "type": "string",
+                    "description": "How to push or pull config changes.",
+                    "enum": ["http", "git", "rsync", "sftp", "multicast", "webhook"],
+                    "default": "http"
+                },
+                "location": {
+                    "type": "string",
+                    "description": "What location to synchronize with if using a pull method. Accepts env vars and tags.",
+                    "default": "https://raw.githubusercontent.com/yourorg/config/cfg_$YOURTAG.json",
+                    "required": false
+                },
+                "sync_cfg": {
+                    "type": "object",
+                    "description": "An open object with config, credentials or whatever else your sync method may require.",
+                    "required": false
+                },
+                "interval": {
+                    "type": "string",
+                    "description": "If synctype is a pull option then how often should we check? Examples: 1m, 20s, 3d, etc.",
+                    "default": "1h"
+                },
+                "randomwait": {
+                    "type": "boolean",
+                    "description": "True if we want to want a random time < interval to start syncing and avoid stampeeding herd.",
+                    "default": "false"
+                },
+                "required": false
+            },
+            "default": {
+                "synctype": "http",
+                "source": "https://raw.githubusercontent.com/yourorg/config/samplecluster.json",
+                "interval": "1h",
+                "randomwait": false
+            }
+        },
+        "hostname": {
+            "type": "string",
+            "description": "Optional hostname may include environment variables. Otherwise use DHCP name.",
+            "default": "$DHCP_HOSTNAME"
+        },
+        "mounts": {
+            "type": "array",
+            "description": "There can be one or more retry_join stanzas. When the raft cluster is getting bootstrapped, if the connection details of all the nodes are known beforehand, then specifying this config stanzas enables the nodes to automatically join a raft cluster. All the nodes would mention all other nodes that they could join using this config. When one of the nodes is initialized, it becomes the leader and all the other nodes will join the leader node to form the cluster. When using Shamir seal, the joined nodes will still need to be unsealed manually. See the section below that describes the parameters accepted by the retry_join stanza.",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "device": {
+                        "type": "string",
+                        "description": "UUID or path to device.",
+                        "default": "/dev/vda1",
+                        "required": true
+                    },
+                    "fstype": {
+                        "type": "string",
+                        "description": "The filesystem type to use when mounting.",
+                        "default": "ext4",
+                        "required": true
+                    },
+                    "path": {
+                        "type": "string",
+                        "description": "Local path to mount the device.",
+                        "default": "/"
+                    },
+                    "options": {
+                        "type": "array",
+                        "description": "A list of mount options which reflects the csv line in /etc/fstab.",
+                        "default": ["defaults"],
+                        "items":{
+                            "type": "string"
+                        }
+                    },
+                    "order": {
+                        "type": "integer",
+                        "description": "The optional order to mount this device. If none then mount from top to bottom of the JSON file.",
+                        "required": false
+                    },
+                    "cryptkey": {
+                        "type": "string",
+                        "description": "The optional encryption key for this device. If none then mount raw.",
+                        "default": "",
+                        "required": false
+                    }
+                }
+            },
+            "default": [
+                {
+                    "device": "/dev/vda",
+                    "fstype": "ext4",
+                    "path": "/",
+                    "options": ["ro"]
+                }
+            ]
+        },
+        "networks": {
+            "type": "array",
+            "description": "Network configuration section.",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "interface": {
+                        "type": "string",
+                        "description": "The interface name to create.",
+                        "default": "eth0",
+                        "required": true
+                    },
+                    "type": {
+                        "type": "string",
+                        "description": "What type of interface is this?",
+                        "enum": ["wifi","ethernet","infiniband","bridge","bond","team","vlan","other"],
+                        "default": "ethernet",
+                        "required": true
+                    },
+                    "config": {
+                        "type": "object",
+                        "description": "Generic configuration block for the type of interface selected.",
+                        "properties": {
+                            "ipv4": {
+                                "type": "object",
+                                "properties": {
+                                    "enabled": {
+                                        "type": "boolean",
+                                        "description": "Enable or disable the interface.",
+                                        "default": true
+                                    },
+                                    "config": {
+                                        "type": "string",
+                                        "description": "How to configure the interface.",
+                                        "enum": ["static", "dhcp"]
+                                    },
+                                    "addr": {
+                                        "type": "string",
+                                        "description": "IPv4 static address. Ignored if using DHCP.",
+                                        "default": "10.10.0.2"
+                                    },
+                                    "mask": {
+                                        "type": "string",
+                                        "description": "IPv4 net mask. Ignored if using DHCP.",
+                                        "default": "255.255.255.0"
+                                    },
+                                    "gateway": {
+                                        "type": "string",
+                                        "description": "Manual gateway selection. Ignored if using DHCP.",
+                                        "default": "10.10.0.1"
+                                    }
+                                }
+                            },
+                            "ipv6": {
+                                "type": "object",
+                                "properties": {
+                                    "enabled": {
+                                        "type": "boolean",
+                                        "description": "Enable or disable the interface.",
+                                        "default": true
+                                    },
+                                    "config": {
+                                        "type": "string",
+                                        "description": "How to configure the interface.",
+                                        "enum": ["static", "dhcp"]
+                                    },
+                                    "addr": {
+                                        "type": "string",
+                                        "description": "IPv4 static address. Ignored if using DHCP.",
+                                        "default": "2001:DB8:0000:0000:244:17FF:FEB6:D37D"
+                                    },
+                                    "mask": {
+                                        "type": "string",
+                                        "description": "IPv4 net mask. Ignored if using DHCP.",
+                                        "default": "FFFF:FFFF:FFFF:FFF8:FFFF:FFFF:FFFF:FFFC"
+                                    },
+                                    "gateway": {
+                                        "type": "string",
+                                        "description": "Manual gateway selection. Ignored if using DHCP.",
+                                        "default": "FE80::1"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "services": {
+            "type": "array",
+            "description": "A list of services with optional artifacts to download.",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Service name.",
+                        "required": true
+                    },
+                    "condition": {
+                        
+                    },
+                    "user": {
+                        "type": "string",
+                        "description": "Optional user name to run this service as. If not specified a dynamic random UID will be created for the duration of the service.",
+                        "required": false
+                    },
+                    "group": {
+                        "type": "string",
+                        "description": "Optional group name to run this service as. User must be a member. If not specified a dynamic random GID will be created for the duration of the service.",
+                        "required": false
+                    },
+                    "requires": {
+                        "type": "array",
+                        "description": "Optionally list services that should be started first. Do not create dependency loops.",
+                        "items": {
+                            "type": "string"
+                        },
+                        "required": false
+                    },
+                    "limits": {},
+                    "command": {},
+                    "artifacts": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "url": {
+                                    "type": "string",
+                                    "description": "The source to download this artifact. Supports http/https/git/s3/rsync.",
+                                    "default": "https://yourartifactory.com/releases/artifact.tar.zst",
+                                    "required": true
+                                },
+                                "signature": {
+                                    "type": "string",
+                                    "description": "Path to a signature for verifying the artifact. Defaults to ${URL}.sig",
+                                    "default": "https://yourartifactory.com/releases/artifact.tar.zst.sig",
+                                    "required": false
+                                },
+                                "destination": {
+                                    "type": "string",
+                                    "description": "Local path to store. Absolute path or relative to service cgroup root.",
+                                    "default": "artifacts/bin/yourartifact",
+                                    "required": true
+                                }
+                            }
+                        },
+                        "required": false
+                    },
+                    "env": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "type": "string",
+                                    "description": "Name of env variable.",
+                                    "default": "HTTP_PROXY",
+                                    "required": true
+                                },
+                                "value": {
+                                    "type": "string",
+                                    "description": "Value of the env variable.",
+                                    "default": "http://$USER:$PASS@sample.proxy:3128",
+                                    "required": true
+                                }
+                            }
+                        },
+                        "required": false
+                    },
+                    "pwd": {},
+                    "systemd_init": {
+                        
+                    }
+                }
+            }
+        }
+    }
+}

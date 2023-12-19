@@ -1,0 +1,51 @@
+{
+    "$schema": "../schemas/schema.json",
+    "source": {
+        "synctype": "http",
+        "source": "https://raw.githubusercontent.com/jboero/heredity/samples/test.json",
+        "interval": "1h",
+        "randomwait": false
+    },
+    "hostname": "test.yourdomain.com",
+    "mounts": [
+        {
+            "device": "/dev/vda",
+            "fstype": "ext4",
+            "path": "/",
+            "options": ["ro"]
+        }
+    ],
+    "networks": [
+        {
+            "interface": "eth0",
+            "config": {
+                "ipv4": {
+                    "config": "dhcp"
+                },
+                "ipv6": {
+                    "config": "dhcp"
+                }
+            }
+        }
+    ],
+    "services": [
+        {
+            "comment": "Run podman as a service with the signed binary and config artifacts if necessary.",
+            "name": "podman",
+            "command": "podman system service -t 0",
+            "artifacts": [
+                {
+                    "comment": "Download and verify Podman binary if needed.",
+                    "url": "https://github.com/containers/podman/releases/download/v4.8.2/podman-remote-static-${KERNEL}_${ARCH}.tar.gz",
+                    "destination": "/usr/bin/podman",
+                    "signature": "https://YOURSIGNATURES/podman/v4.8.2/podman-remote-static-${$KERNEL}_${ARCH}.asc"
+                }, {
+                    "comment": "Use signed config from Git repo.",
+                    "url": "https://YOURVCS/YOURORG/podmanconfig/archive/refs/heads/main.zip",
+                    "destination": "/etc/containers",
+                    "signature": "https://raw.YOURVCS/YOURORG/podmanconfig/main/signature.asc"
+                }
+            ]
+        }
+    ]
+}
